@@ -30,7 +30,7 @@ def fetch(key):
     if value:
         return jsonify({"key": key, "value": value})
     else:
-        return jsonify({"error": "Key not found"}), 404
+        return jsonify({"error": "Key not found. Enter valid key"}), 404
 
 # Delete a Key-Value Pair (DELETE)
 @app.route('/delete/<key>', methods=['DELETE'])
