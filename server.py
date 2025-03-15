@@ -5,7 +5,6 @@ from flask_cors import CORS
 app = Flask(__name__, template_folder="templates")
 CORS(app, supports_credentials=True)
 
-# Store messages in a dictionary (User 1 messages go to User 2 and vice versa)
 messages = {"user1": [], "user2": []}
 
 @app.route("/")
@@ -26,8 +25,9 @@ def send_message():
     recipient = "user2" if sender == "user1" else "user1"
 
     if sender in messages and recipient in messages:
-        messages[recipient].append(f"{sender}: {message}")  # Store messages in recipient's box
-        return jsonify({"message": "Message sent successfully!", "data": {sender: message}}), 201
+        messages[recipient].append({"text": message, "type": "received"})  # Recipient gets it as a received message
+        messages[sender].append({"text": message, "type": "sent"})  # Sender stores it as a sent message
+        return jsonify({"message": "Message sent successfully!"}), 201
 
     return jsonify({"error": "Invalid user"}), 400
 
