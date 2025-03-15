@@ -1,41 +1,44 @@
 import requests
 
 SERVER_URL = "https://localhost:5002"
+CERT_PATH = "client.crt"
+KEY_PATH = "client_unencrypted.key"
+CA_CERT_PATH = "server.crt"  # Verify the server's certificate
 
-def store_key_value():
-    key = input("Enter key: ")
-    value = input("Enter value: ")
-    response = requests.post(f"{SERVER_URL}/store", json={"key": key, "value": value}, verify="server.crt")
-    print("\n🔑 Response:", response.json())
+def send_message():
+    username = input("Enter your username: ")
+    message = input("Enter your message: ")
+    response = requests.post(
+        f"{SERVER_URL}/send",
+        json={"username": username, "message": message},
+        cert=(CERT_PATH, KEY_PATH),
+        verify=CA_CERT_PATH
+    )
+    print("\n🔐 Response:", response.json())
 
-def fetch_value():
-    key = input("Enter key to fetch: ")
-    response = requests.get(f"{SERVER_URL}/fetch/{key}", verify="server.crt")
-    print("\n🔑 Response:", response.json())
-
-def delete_key():
-    key = input("Enter key to delete: ")
-    response = requests.delete(f"{SERVER_URL}/delete/{key}", verify="server.crt")
-    print("\n🔑 Response:", response.json())
+def receive_messages():
+    username = input("Enter username to fetch messages: ")
+    response = requests.get(
+        f"{SERVER_URL}/receive/{username}",
+        cert=(CERT_PATH, KEY_PATH),
+        verify=CA_CERT_PATH
+    )
+    print("\n🔐 Response:", response.json())
 
 def main():
-
     while True:
-        print("\n💎 Secure Key-Value Store Client 💎")
-        print("\n1. Store a key-value pair")
-        print("2. Fetch a value by key")
-        print("3. Delete a key-value pair")
-        print("4. Exit")
-
-        choice = input("\nSelect an option: ")
+        print("\n💬 Secure Chat Client 💬")
+        print("1. Send a message")
+        print("2. Receive messages")
+        print("3. Exit")
+        choice = input("Select an option: ")
+        
         if choice == "1":
-            store_key_value()
+            send_message()
         elif choice == "2":
-            fetch_value()
+            receive_messages()
         elif choice == "3":
-            delete_key()
-        elif choice == "4":
-            print("Exiting Secure Client...")
+            print("Exiting Secure Chat Client...")
             break
         else:
             print("Invalid choice. Try again.")

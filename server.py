@@ -3,45 +3,41 @@ import ssl
 
 app = Flask(__name__)
 
-# In-memory key-value store
-key_value_store = {}
+# In-memory message store (Dictionary format: {username: [messages]})
+messages_store = {}
 
 @app.route('/')
 def home():
-    return "🔒 Secure TLS Server Running!"
+    return "🔒 Secure TLS Chat Server Running with Mutual Authentication!"
 
-# Store a Key-Value Pair (POST)
-@app.route('/store', methods=['POST'])
-def store():
+# Send a message (POST)
+@app.route('/send', methods=['POST'])
+def send_message():
     data = request.json
-    key = data.get("key")
-    value = data.get("value")
+    username = data.get("username")
+    message = data.get("message")
+    
+    if not username or not message:
+        return jsonify({"error": "Username and message required"}), 400
+    
+    if username not in messages_store:
+        messages_store[username] = []
+    
+    messages_store[username].append(message)
+    return jsonify({"message": "Message sent successfully!", "data": {username: message}}), 201
 
-    if not key or not value:
-        return jsonify({"error": "Key and value required"}), 400
-
-    key_value_store[key] = value
-    return jsonify({"message": "Key-Value stored successfully!", "data": {key: value}}), 201
-
-# Retrieve a Value by Key (GET)
-@app.route('/fetch/<key>', methods=['GET'])
-def fetch(key):
-    value = key_value_store.get(key)
-    if value:
-        return jsonify({"key": key, "value": value})
+# Retrieve messages by username (GET)
+@app.route('/receive/<username>', methods=['GET'])
+def receive_messages(username):
+    if username in messages_store:
+        return jsonify({"username": username, "messages": messages_store[username]})
     else:
-        return jsonify({"error": "Key not found. Enter valid key"}), 404
-
-# Delete a Key-Value Pair (DELETE)
-@app.route('/delete/<key>', methods=['DELETE'])
-def delete(key):
-    if key in key_value_store:
-        del key_value_store[key]
-        return jsonify({"message": f"Key '{key}' deleted successfully"}), 200
-    else:
-        return jsonify({"error": "Key not found"}), 404
+        return jsonify({"error": "No messages found for this user"}), 404
 
 if __name__ == '__main__':
     context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
-    context.load_cert_chain(certfile="server.crt", keyfile="server.key")  # Load TLS certificate
+    context.load_cert_chain(certfile="server.crt", keyfile="server.key")
+    context.verify_mode = ssl.CERT_REQUIRED
+    context.load_verify_locations("client.crt")  # Mutual TLS Authentication
+    
     app.run(host='0.0.0.0', port=5002, ssl_context=context)
