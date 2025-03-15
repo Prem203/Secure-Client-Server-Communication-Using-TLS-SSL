@@ -40,20 +40,6 @@ $ source venv/bin/activate   # For macOS/Linux
 $ venv\Scripts\activate     # For Windows
 ```
 
-### 3️⃣ Install Dependencies
-
-```sh
-$ pip install -r requirements.txt
-```
-
-### 4️⃣ Generate SSL Certificates (If Not Provided)
-
-If the repository does not contain `server.crt` and `server.key`, generate them using:
-
-```sh
-$ openssl req -x509 -newkey rsa:2048 -keyout server.key -out server.crt -days 365 -nodes
-```
-
 ---
 
 ## 🖥️ Running the Server
