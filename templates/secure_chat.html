@@ -56,42 +56,51 @@
     </div>
 
     <script>
-      const SERVER_URL = "https://localhost:5002";
-      async function sendMessage(user) {
+    const SERVER_URL = "https://localhost:5002";
+
+    async function sendMessage(user) {
         const inputField = document.getElementById(`${user}-input`);
-        const message = inputField.value;
+        const message = inputField.value.trim();
         if (!message) return;
+
         try {
-          await fetch(`${SERVER_URL}/send`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ username: user, message: message }),
-            mode: "cors", // Ensure CORS is allowed
-            credentials: "include", // Allow cookies if needed
-          });
+            await fetch(`${SERVER_URL}/send`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ username: user, message: message }),
+                mode: "cors",
+                credentials: "include",
+            });
         } catch (error) {
-          console.error("Fetch error:", error);
+            console.error("Fetch error:", error);
         }
         inputField.value = "";
         fetchMessages();
-      }
-      async function fetchMessages() {
+    }
+
+    async function fetchMessages() {
         const users = ["user1", "user2"];
         for (let user of users) {
-          try {
-            const response = await fetch(`${SERVER_URL}/receive/${user}`, {
-              mode: "cors",
-              credentials: "include",
-            });
-            const data = await response.json();
-            document.getElementById(`${user}-messages`).innerHTML =
-              data.messages.map((msg) => `<p>${msg}</p>`).join("");
-          } catch (error) {
-            console.error(`Error fetching messages for ${user}:`, error);
-          }
+            try {
+                const response = await fetch(`${SERVER_URL}/receive/${user}`, {
+                    mode: "cors",
+                    credentials: "include",
+                });
+                const data = await response.json();
+                
+                const chatBox = document.getElementById(`${user}-messages`);
+                chatBox.innerHTML = data.messages.map(msg => `<p>${msg}</p>`).join("");
+                
+                // Auto-scroll to the latest message
+                chatBox.scrollTop = chatBox.scrollHeight;
+                
+            } catch (error) {
+                console.error(`Error fetching messages for ${user}:`, error);
+            }
         }
-      }
-      setInterval(fetchMessages, 2000);
+    }
+
+    setInterval(fetchMessages, 2000);
     </script>
   </body>
 </html>

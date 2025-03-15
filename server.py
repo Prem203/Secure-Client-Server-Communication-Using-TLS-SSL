@@ -2,9 +2,10 @@ from flask import Flask, request, jsonify, render_template
 import ssl
 from flask_cors import CORS
 
-app = Flask(__name__, template_folder="templates")  # Ensure Flask knows where to look for HTML files
+app = Flask(__name__, template_folder="templates")
 CORS(app, supports_credentials=True)
 
+# Store messages in a dictionary (User 1 messages go to User 2 and vice versa)
 messages = {"user1": [], "user2": []}
 
 @app.route("/")
@@ -13,17 +14,21 @@ def home():
 
 @app.route("/chat")
 def chat():
-    return render_template("secure_chat.html")  # Serves the HTML page
+    return render_template("secure_chat.html")
 
 @app.route("/send", methods=["POST"])
 def send_message():
     data = request.json
-    username = data.get("username")
+    sender = data.get("username")  # sender (user1 or user2)
     message = data.get("message")
 
-    if username in messages:
-        messages[username].append(message)
-        return jsonify({"message": "Message sent successfully!", "data": {username: message}}), 201
+    # Determine recipient (if sender is user1, recipient is user2)
+    recipient = "user2" if sender == "user1" else "user1"
+
+    if sender in messages and recipient in messages:
+        messages[recipient].append(f"{sender}: {message}")  # Store messages in recipient's box
+        return jsonify({"message": "Message sent successfully!", "data": {sender: message}}), 201
+
     return jsonify({"error": "Invalid user"}), 400
 
 @app.route("/receive/<username>")
