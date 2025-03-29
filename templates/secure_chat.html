@@ -1,79 +1,144 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>Secure WebSocket Chat</title>
-  <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
-  <style>
-    body { font-family: Arial; background: #f5f5f5; margin: 0; padding: 1rem; display: flex; flex-direction: column; align-items: center; }
-    #chat { width: 600px; max-width: 90%; background: white; padding: 1rem; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
-    #messages { height: 300px; overflow-y: scroll; border: 1px solid #ccc; padding: 1rem; margin-bottom: 1rem; display: flex; flex-direction: column; gap: 8px; }
-    .msg { padding: 8px 12px; border-radius: 20px; max-width: 70%; }
-    .outgoing { background: #d1e7dd; align-self: flex-end; }
-    .incoming { background: #cfe2ff; align-self: flex-start; }
-    #inputArea { display: flex; gap: 8px; }
-    input, button { padding: 8px; font-size: 1rem; }
-    input { flex: 1; }
-  </style>
-</head>
-<body>
-  <div id="chat">
-    <h2>🔐 Secure WebSocket Chat</h2>
-    <p>Logged in as: <span id="userLabel"></span></p>
-    <div id="messages"></div>
-    <div id="inputArea">
-      <input type="text" id="messageInput" placeholder="Type your message..." />
-      <button onclick="sendMessage()">Send</button>
+  <head>
+    <meta charset="UTF-8" />
+    <title>Secure WebSocket Chat</title>
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <style>
+      body {
+        font-family: Arial;
+        background: #f5f5f5;
+        margin: 0;
+        padding: 1rem;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+      }
+      #chat {
+        width: 600px;
+        max-width: 90%;
+        background: white;
+        padding: 1rem;
+        border-radius: 8px;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+      }
+      #messages {
+        height: 300px;
+        overflow-y: scroll;
+        border: 1px solid #ccc;
+        padding: 1rem;
+        margin-bottom: 1rem;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .msg {
+        padding: 8px 12px;
+        border-radius: 20px;
+        max-width: 70%;
+      }
+      .outgoing {
+        background: #d1e7dd;
+        align-self: flex-end;
+      }
+      .incoming {
+        background: #cfe2ff;
+        align-self: flex-start;
+      }
+      #inputArea {
+        display: flex;
+        gap: 8px;
+      }
+      input,
+      button {
+        padding: 8px;
+        font-size: 1rem;
+      }
+      input {
+        flex: 1;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="chat">
+      <h2>🔐 Secure WebSocket Chat</h2>
+      <p>Logged in as: <span id="userLabel"></span></p>
+      <div id="messages"></div>
+      <div id="inputArea">
+        <input
+          type="text"
+          id="messageInput"
+          placeholder="Type your message..."
+        />
+        <button onclick="sendMessage()">Send</button>
+      </div>
     </div>
-  </div>
 
-  <script>
-    const username = prompt("Enter your username:");
-    const receiver = prompt("Who are you chatting with?");
+    <script>
+      const username = prompt("Enter your username:");
+      const receiver = prompt("Who are you chatting with?");
 
-    document.getElementById("userLabel").innerText = username;
+      document.getElementById("userLabel").innerText = username;
 
-    const socket = io("https://localhost:5002", {
-      query: { username },
-      transports: ['websocket'],
-      secure: true
-    });
-
-    socket.on("connect", () => {
-      console.log("Connected as", username);
-      socket.emit("fetch_messages", { username });
-    });
-
-    socket.on("message_history", (messages) => {
-      messages.forEach(m => appendMessage(m.message, m.from === username ? 'outgoing' : 'incoming'));
-    });
-
-    socket.on("receive_message", (data) => {
-      appendMessage(data.message, 'incoming');
-    });
-
-    function sendMessage() {
-      const input = document.getElementById("messageInput");
-      const msg = input.value.trim();
-      if (!msg) return;
-
-      socket.emit("send_message", {
-        sender: username,
-        receiver,
-        message: msg
+      const socket = io("https://localhost:5002", {
+        query: { username },
+        transports: ["websocket"],
+        secure: true,
       });
 
-      appendMessage(msg, 'outgoing');
-      input.value = "";
-    }
+      socket.on("connect", () => {
+        console.log("Connected as", username);
+        socket.emit("fetch_messages", { username });
+      });
 
-    function appendMessage(text, type) {
-      const msgEl = document.createElement("div");
-      msgEl.className = `msg ${type}`;
-      msgEl.innerText = text;
-      document.getElementById("messages").appendChild(msgEl);
-      document.getElementById("messages").scrollTop = document.getElementById("messages").scrollHeight;
-    }
-  </script>
-</body>
+      socket.on("message_history", (messages) => {
+        messages.forEach((m) =>
+          appendMessage(
+            m.message,
+            m.from === username ? "outgoing" : "incoming"
+          )
+        );
+      });
+
+      socket.on("receive_message", (data) => {
+        appendMessage(data.message, "incoming");
+      });
+
+      function sendMessage() {
+        const input = document.getElementById("messageInput");
+        const msg = input.value.trim();
+        if (!msg) return;
+
+        socket.emit("send_message", {
+          sender: username,
+          receiver,
+          message: msg,
+        });
+
+        appendMessage(msg, "outgoing");
+        input.value = "";
+      }
+
+      // appendMessage function
+      function appendMessage(text, type) {
+        const msgEl = document.createElement("div");
+        msgEl.className = `msg ${type}`;
+        msgEl.innerText = text;
+        document.getElementById("messages").appendChild(msgEl);
+        document.getElementById("messages").scrollTop =
+          document.getElementById("messages").scrollHeight;
+      }
+
+      window.addEventListener("DOMContentLoaded", () => {
+        document
+          .getElementById("messageInput")
+          .addEventListener("keydown", function (event) {
+            if (event.key === "Enter") {
+              event.preventDefault();
+              sendMessage();
+            }
+          });
+      });
+    </script>
+  </body>
 </html>
