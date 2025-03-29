@@ -1,144 +1,79 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Secure Chat</title>
-    <style>
-      body {
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        height: 100vh;
-        font-family: Arial, sans-serif;
-      }
-      .chat-container {
-        display: flex;
-        width: 80%;
-        border: 2px solid black;
-      }
-      .chat-box {
-        flex: 1;
-        padding: 10px;
-        border-right: 1px solid black;
-        display: flex;
-        flex-direction: column;
-      }
-      .chat-box:last-child {
-        border-right: none;
-      }
-      .messages {
-        flex-grow: 1;
-        height: 300px;
-        overflow-y: auto;
-        border: 1px solid #ccc;
-        padding: 5px;
-        display: flex;
-        flex-direction: column;
-      }
-      .message {
-        padding: 10px;
-        margin: 5px 0;
-        border-radius: 10px;
-        max-width: 70%;
-        word-wrap: break-word;
-      }
-      .sent {
-        background-color: #dcf8c6;
-        align-self: flex-end;
-        text-align: right;
-      }
-      .received {
-        background-color: #add8e6;
-        align-self: flex-start;
-        text-align: left;
-      }
-      .input-container {
-        display: flex;
-        gap: 10px;
-        padding-top: 5px;
-      }
-      .input-container input {
-        flex-grow: 1;
-        padding: 10px;
-        border: 1px solid #ccc;
-        border-radius: 5px;
-      }
-      .input-container button {
-        padding: 10px;
-        border: 1px solid #ccc;
-        border-radius: 5px;
-        cursor: pointer;
-      }
-    </style>
-  </head>
-  <body>
-    <div class="chat-container">
-      <div class="chat-box" id="user1-box">
-        <h3>User 1</h3>
-        <div class="messages" id="user1-messages"></div>
-        <div class="input-container">
-          <input type="text" id="user1-input" placeholder="Type a message..." />
-          <button onclick="sendMessage('user1')">Send</button>
-        </div>
-      </div>
-      <div class="chat-box" id="user2-box">
-        <h3>User 2</h3>
-        <div class="messages" id="user2-messages"></div>
-        <div class="input-container">
-          <input type="text" id="user2-input" placeholder="Type a message..." />
-          <button onclick="sendMessage('user2')">Send</button>
-        </div>
-      </div>
+<head>
+  <meta charset="UTF-8">
+  <title>Secure WebSocket Chat</title>
+  <script src="https://cdn.socket.io/4.7.2/socket.io.min.js" integrity="sha384-M25Sz+k3KkKDBjw0XLok3knLTIrroY7qkQtP79wvR5AR6+p6oSFM2eTuL6LMVYpZ" crossorigin="anonymous"></script>
+  <style>
+    body { font-family: Arial; background: #f5f5f5; margin: 0; padding: 1rem; display: flex; flex-direction: column; align-items: center; }
+    #chat { width: 600px; max-width: 90%; background: white; padding: 1rem; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+    #messages { height: 300px; overflow-y: scroll; border: 1px solid #ccc; padding: 1rem; margin-bottom: 1rem; display: flex; flex-direction: column; gap: 8px; }
+    .msg { padding: 8px 12px; border-radius: 20px; max-width: 70%; }
+    .outgoing { background: #d1e7dd; align-self: flex-end; }
+    .incoming { background: #cfe2ff; align-self: flex-start; }
+    #inputArea { display: flex; gap: 8px; }
+    input, button { padding: 8px; font-size: 1rem; }
+    input { flex: 1; }
+  </style>
+</head>
+<body>
+  <div id="chat">
+    <h2>🔐 Secure WebSocket Chat</h2>
+    <p>Logged in as: <span id="userLabel"></span></p>
+    <div id="messages"></div>
+    <div id="inputArea">
+      <input type="text" id="messageInput" placeholder="Type your message..." />
+      <button onclick="sendMessage()">Send</button>
     </div>
+  </div>
 
-    <script>
-      const SERVER_URL = "https://localhost:5002";
+  <script>
+    const username = prompt("Enter your username:");
+    const receiver = prompt("Who are you chatting with?");
 
-      async function sendMessage(user) {
-        const inputField = document.getElementById(`${user}-input`);
-        const message = inputField.value.trim();
-        if (!message) return;
+    document.getElementById("userLabel").innerText = username;
 
-        try {
-          await fetch(`${SERVER_URL}/send`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ username: user, message: message }),
-            mode: "cors",
-            credentials: "include",
-          });
-        } catch (error) {
-          console.error("Fetch error:", error);
-        }
-        inputField.value = "";
-        fetchMessages();
-      }
+    const socket = io("https://localhost:5002", {
+      query: { username },
+      transports: ['websocket'],
+      secure: true
+    });
 
-      async function fetchMessages() {
-        const users = ["user1", "user2"];
-        for (let user of users) {
-          try {
-            const response = await fetch(`${SERVER_URL}/receive/${user}`, {
-              mode: "cors",
-              credentials: "include",
-            });
-            const data = await response.json();
+    socket.on("connect", () => {
+      console.log("Connected as", username);
+      socket.emit("fetch_messages", { username });
+    });
 
-            const chatBox = document.getElementById(`${user}-messages`);
-            chatBox.innerHTML = data.messages
-              .map((msg) => `<p class="message ${msg.type}">${msg.text}</p>`)
-              .join("");
+    socket.on("message_history", (messages) => {
+      messages.forEach(m => appendMessage(m.message, m.from === username ? 'outgoing' : 'incoming'));
+    });
 
-            // Auto-scroll to the latest message
-            chatBox.scrollTop = chatBox.scrollHeight;
-          } catch (error) {
-            console.error(`Error fetching messages for ${user}:`, error);
-          }
-        }
-      }
+    socket.on("receive_message", (data) => {
+      appendMessage(data.message, 'incoming');
+    });
 
-      setInterval(fetchMessages, 2000);
-    </script>
-  </body>
+    function sendMessage() {
+      const input = document.getElementById("messageInput");
+      const msg = input.value.trim();
+      if (!msg) return;
+
+      socket.emit("send_message", {
+        sender: username,
+        receiver,
+        message: msg
+      });
+
+      appendMessage(msg, 'outgoing');
+      input.value = "";
+    }
+
+    function appendMessage(text, type) {
+      const msgEl = document.createElement("div");
+      msgEl.className = `msg ${type}`;
+      msgEl.innerText = text;
+      document.getElementById("messages").appendChild(msgEl);
+      document.getElementById("messages").scrollTop = document.getElementById("messages").scrollHeight;
+    }
+  </script>
+</body>
 </html>
