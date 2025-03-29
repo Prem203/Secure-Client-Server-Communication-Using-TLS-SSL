@@ -26,6 +26,90 @@
         padding: 20px;
       }
 
+      /* Login container */
+      .login-container {
+        width: 100%;
+        max-width: 400px;
+        background-color: white;
+        border-radius: 12px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+        overflow: hidden;
+      }
+
+      .login-header {
+        background-color: #1e293b;
+        color: white;
+        padding: 20px;
+        text-align: center;
+      }
+
+      .login-title {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        font-size: 1.5rem;
+        font-weight: 600;
+        margin-bottom: 8px;
+      }
+
+      .login-subtitle {
+        font-size: 0.9rem;
+        opacity: 0.8;
+      }
+
+      .login-form {
+        padding: 24px;
+      }
+
+      .form-group {
+        margin-bottom: 20px;
+      }
+
+      .form-label {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: 500;
+        color: #1e293b;
+      }
+
+      .form-input {
+        width: 100%;
+        padding: 12px 16px;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        font-size: 1rem;
+        transition: border-color 0.2s;
+      }
+
+      .form-input:focus {
+        outline: none;
+        border-color: #3b82f6;
+      }
+
+      .login-button {
+        width: 100%;
+        padding: 12px;
+        background-color: #3b82f6;
+        color: white;
+        border: none;
+        border-radius: 8px;
+        font-size: 1rem;
+        font-weight: 500;
+        cursor: pointer;
+        transition: background-color 0.2s;
+      }
+
+      .login-button:hover {
+        background-color: #2563eb;
+      }
+
+      .login-button:disabled {
+        background-color: #94a3b8;
+        cursor: not-allowed;
+      }
+
+      /* Chat container */
       .chat-container {
         width: 100%;
         max-width: 800px;
@@ -36,6 +120,7 @@
         display: flex;
         flex-direction: column;
         overflow: hidden;
+        display: none; /* Hidden initially */
       }
 
       /* Header styles */
@@ -249,10 +334,73 @@
         gap: 4px;
         box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
       }
+
+      /* Error message */
+      .error-message {
+        color: #ef4444;
+        font-size: 0.875rem;
+        margin-top: 8px;
+        display: none;
+      }
     </style>
   </head>
   <body>
-    <div class="chat-container">
+    <!-- Login Form -->
+    <div class="login-container" id="loginContainer">
+      <div class="login-header">
+        <div class="login-title">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <rect width="18" height="11" x="3" y="11" rx="2" ry="2"></rect>
+            <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+          </svg>
+          Secure Chat
+        </div>
+        <div class="login-subtitle">End-to-end encrypted messaging</div>
+      </div>
+
+      <div class="login-form">
+        <div class="form-group">
+          <label for="usernameInput" class="form-label">Your Username</label>
+          <input
+            type="text"
+            id="usernameInput"
+            class="form-input"
+            placeholder="Enter your username"
+          />
+          <div class="error-message" id="usernameError">
+            Username is required
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="receiverInput" class="form-label">Chat With</label>
+          <input
+            type="text"
+            id="receiverInput"
+            class="form-input"
+            placeholder="Enter recipient's username"
+          />
+          <div class="error-message" id="receiverError">
+            Recipient is required
+          </div>
+        </div>
+
+        <button class="login-button" id="loginButton">Start Secure Chat</button>
+      </div>
+    </div>
+
+    <!-- Chat Interface -->
+    <div class="chat-container" id="chatContainer">
       <!-- Chat header -->
       <div class="chat-header">
         <div class="header-left">
@@ -284,7 +432,7 @@
             <div class="avatar" id="userAvatar"></div>
             <span id="userLabel"></span>
           </div>
-          <button class="logout-button">
+          <button class="logout-button" id="logoutButton">
             <svg
               xmlns="http://www.w3.org/2000/svg"
               width="16"
@@ -336,67 +484,149 @@
           id="messageInput"
           placeholder="Type your message..."
         />
-        <button class="send-button" id="sendButton" onclick="sendMessage()">
-          Send
-        </button>
+        <button class="send-button" id="sendButton">Send</button>
       </div>
     </div>
 
     <script>
-      // Get username and receiver
-      const username = prompt("Enter your username:") || "User";
-      const receiver = prompt("Who are you chatting with?") || "Friend";
+      // DOM Elements
+      const loginContainer = document.getElementById("loginContainer");
+      const chatContainer = document.getElementById("chatContainer");
+      const usernameInput = document.getElementById("usernameInput");
+      const receiverInput = document.getElementById("receiverInput");
+      const loginButton = document.getElementById("loginButton");
+      const logoutButton = document.getElementById("logoutButton");
+      const usernameError = document.getElementById("usernameError");
+      const receiverError = document.getElementById("receiverError");
+      const messageInput = document.getElementById("messageInput");
+      const sendButton = document.getElementById("sendButton");
+      const messagesDiv = document.getElementById("messages");
+      const userLabel = document.getElementById("userLabel");
+      const userAvatar = document.getElementById("userAvatar");
+      const chatTitle = document.getElementById("chatTitle");
 
-      // Update UI with user info
-      document.getElementById("userLabel").textContent = username;
-      document.getElementById("userAvatar").textContent = username
-        .charAt(0)
-        .toUpperCase();
-      document.getElementById("chatTitle").textContent = receiver;
-
-      // Initialize Socket.IO connection
+      // Variables
+      let username = "";
+      let receiver = "";
       let socket;
-      try {
-        socket = io("https://localhost:5002", {
-          query: { username },
-          transports: ["websocket"],
-          secure: true,
-        });
 
-        // Connection events
-        socket.on("connect", () => {
-          console.log("Connected as", username);
-          addSystemMessage(`Connected to chat server`);
-          socket.emit("fetch_messages", { username });
-        });
+      // Login form validation
+      usernameInput.addEventListener("input", () => {
+        if (usernameInput.value.trim()) {
+          usernameError.style.display = "none";
+        }
+      });
 
-        socket.on("connect_error", (error) => {
-          console.error("Connection error:", error);
-          addSystemMessage(
-            "Could not connect to chat server. Using demo mode."
-          );
+      receiverInput.addEventListener("input", () => {
+        if (receiverInput.value.trim()) {
+          receiverError.style.display = "none";
+        }
+      });
+
+      // Login button click
+      loginButton.addEventListener("click", () => {
+        let isValid = true;
+
+        // Validate username
+        if (!usernameInput.value.trim()) {
+          usernameError.style.display = "block";
+          isValid = false;
+        } else {
+          usernameError.style.display = "none";
+        }
+
+        // Validate receiver
+        if (!receiverInput.value.trim()) {
+          receiverError.style.display = "block";
+          isValid = false;
+        } else {
+          receiverError.style.display = "none";
+        }
+
+        if (isValid) {
+          // Set username and receiver
+          username = usernameInput.value.trim();
+          receiver = receiverInput.value.trim();
+
+          // Update UI
+          userLabel.textContent = username;
+          userAvatar.textContent = username.charAt(0).toUpperCase();
+          chatTitle.textContent = receiver;
+
+          // Show chat interface
+          loginContainer.style.display = "none";
+          chatContainer.style.display = "flex";
+
+          // Initialize chat
+          initializeChat();
+        }
+      });
+
+      // Logout button click
+      logoutButton.addEventListener("click", () => {
+        // Disconnect socket if connected
+        if (socket && socket.connected) {
+          socket.disconnect();
+        }
+
+        // Clear chat messages
+        messagesDiv.innerHTML = "";
+
+        // Show login form
+        chatContainer.style.display = "none";
+        loginContainer.style.display = "block";
+
+        // Clear form inputs
+        usernameInput.value = "";
+        receiverInput.value = "";
+        messageInput.value = "";
+      });
+
+      // Initialize chat
+      function initializeChat() {
+        try {
+          // Initialize Socket.IO connection
+          socket = io("https://localhost:5002", {
+            query: { username },
+            transports: ["websocket"],
+            secure: true,
+          });
+
+          // Connection events
+          socket.on("connect", () => {
+            console.log("Connected as", username);
+            addSystemMessage(`Connected to chat server`);
+            socket.emit("fetch_messages", { username });
+          });
+
+          socket.on("connect_error", (error) => {
+            console.error("Connection error:", error);
+            addSystemMessage(
+              "Could not connect to chat server. Using demo mode."
+            );
+            // Enable demo mode
+            enableDemoMode();
+          });
+
+          // Message events
+          socket.on("message_history", (messages) => {
+            messages.forEach((msg) => {
+              appendMessage(
+                msg.message,
+                msg.from === username ? "outgoing" : "incoming"
+              );
+            });
+          });
+
+          socket.on("receive_message", (data) => {
+            appendMessage(data.message, "incoming");
+          });
+        } catch (error) {
+          console.error("Socket initialization error:", error);
+          addSystemMessage("Chat server unavailable. Using demo mode.");
           // Enable demo mode
           enableDemoMode();
-        });
-
-        // Message events
-        socket.on("message_history", (messages) => {
-          messages.forEach((msg) => {
-            appendMessage(
-              msg.message,
-              msg.from === username ? "outgoing" : "incoming"
-            );
-          });
-        });
-
-        socket.on("receive_message", (data) => {
-          appendMessage(data.message, "incoming");
-        });
-      } catch (error) {
-        console.error("Socket initialization error:", error);
-        addSystemMessage("Chat server unavailable. Using demo mode.");
-        // Enable demo mode
-        enableDemoMode();
+        }
       }
 
       // Demo mode function
@@ -409,8 +639,7 @@
 
       // Send message function
       function sendMessage() {
-        const input = document.getElementById("messageInput");
-        const msg = input.value.trim();
+        const msg = messageInput.value.trim();
         if (!msg) return;
 
         // Add message to UI
@@ -431,12 +660,12 @@
         }
 
         // Clear input
-        input.value = "";
+        messageInput.value = "";
+        sendButton.disabled = true;
       }
 
       // Append message to chat
       function appendMessage(text, type) {
-        const messagesDiv = document.getElementById("messages");
         const msgEl = document.createElement("div");
         msgEl.className = `msg ${type}`;
 
@@ -454,7 +683,6 @@
 
       // Add system message
       function addSystemMessage(message) {
-        const messagesDiv = document.getElementById("messages");
         const systemDiv = document.createElement("div");
         systemDiv.className = "system-message";
         systemDiv.textContent = message;
@@ -464,22 +692,23 @@
       }
 
       // Enter key to send
-      document
-        .getElementById("messageInput")
-        .addEventListener("keydown", (e) => {
-          if (e.key === "Enter") {
-            e.preventDefault();
-            sendMessage();
-          }
-        });
+      messageInput.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          sendMessage();
+        }
+      });
+
+      // Send button click
+      sendButton.addEventListener("click", sendMessage);
 
       // Disable/enable send button based on input
-      const messageInput = document.getElementById("messageInput");
-      const sendButton = document.getElementById("sendButton");
-
       messageInput.addEventListener("input", () => {
         sendButton.disabled = !messageInput.value.trim();
       });
+
+      // Initialize send button as disabled
+      sendButton.disabled = true;
     </script>
   </body>
 </html>
