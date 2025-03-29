@@ -1,43 +1,57 @@
-from flask import Flask, request, jsonify, render_template
-import ssl
+from flask import Flask, render_template, request
+from flask_socketio import SocketIO, emit, join_room, leave_room
 from flask_cors import CORS
 
-app = Flask(__name__, template_folder="templates")
-CORS(app, supports_credentials=True)
+app = Flask(__name__)
+app.config['SECRET_KEY'] = 'your-secret-key'  # replace with os.urandom or env var in prod
+socketio = SocketIO(app, cors_allowed_origins="*")
+CORS(app)
 
-messages = {"user1": [], "user2": []}
+# In-memory message storage (per user)
+message_store = {}
 
-@app.route("/")
-def home():
-    return "🔒 Secure TLS Server Running!"
+@app.route('/')
+def index():
+    return "🔒 Secure WebSocket Chat Server Running!"
 
-@app.route("/chat")
-def chat():
-    return render_template("secure_chat.html")
+@app.route('/chat')
+def serve_chat_ui():
+    return render_template('secure_chat.html')  # served from templates/secure_chat.html
 
-@app.route("/send", methods=["POST"])
-def send_message():
-    data = request.json
-    sender = data.get("username")  # sender (user1 or user2)
-    message = data.get("message")
+@socketio.on('connect')
+def on_connect():
+    username = request.args.get('username')
+    print(f"[Connected] {username}")
+    join_room(username)
 
-    # Determine recipient (if sender is user1, recipient is user2)
-    recipient = "user2" if sender == "user1" else "user1"
+@socketio.on('disconnect')
+def on_disconnect():
+    username = request.args.get('username')
+    print(f"[Disconnected] {username}")
+    leave_room(username)
 
-    if sender in messages and recipient in messages:
-        messages[recipient].append({"text": message, "type": "received"})  # Recipient gets it as a received message
-        messages[sender].append({"text": message, "type": "sent"})  # Sender stores it as a sent message
-        return jsonify({"message": "Message sent successfully!"}), 201
+@socketio.on('send_message')
+def handle_send_message(data):
+    sender = data.get('sender')
+    receiver = data.get('receiver')
+    message = data.get('message')
+    print(f"[Message] {sender} -> {receiver}: {message}")
 
-    return jsonify({"error": "Invalid user"}), 400
+    # Save message for receiver
+    message_store.setdefault(receiver, []).append({
+        'from': sender,
+        'message': message
+    })
 
-@app.route("/receive/<username>")
-def receive_messages(username):
-    if username in messages:
-        return jsonify({"messages": messages[username], "username": username})
-    return jsonify({"error": "User not found"}), 404
+    # Emit message to receiver in their private room
+    emit('receive_message', {'from': sender, 'message': message}, room=receiver)
 
-if __name__ == "__main__":
-    context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
-    context.load_cert_chain(certfile="server.crt", keyfile="server.key")
-    app.run(host="0.0.0.0", port=5002, ssl_context=context)
+@socketio.on('fetch_messages')
+def fetch_messages(data):
+    username = data.get('username')
+    messages = message_store.get(username, [])
+    emit('message_history', messages)
+    message_store[username] = []  # clear once sent
+
+if __name__ == '__main__':
+    socketio.run(app, host='0.0.0.0', port=5002, ssl_context=('server.crt', 'server.key'))
